@@ -1,0 +1,29 @@
+{
+  "name": "keyboard-focus-audit",
+  "version": "0.0.1",
+  "description": "tab through a page, record the focus order, and look for traps and missing indicators",
+  "license": "MIT",
+  "author": "Irfan Sencer Senyurt",
+  "type": "module",
+  "bin": {
+    "keyboard-focus-audit": "./dist/keyboard-focus-audit.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "playwright": "^1.64.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
