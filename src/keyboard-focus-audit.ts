@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { parseArgv, usageText } from "./read-args.js";
+import { formatFocusTable } from "./print-focus-table.js";
+import { walkFocus } from "./walk-focus.js";
 
 const parsed = parseArgv(process.argv.slice(2));
 
@@ -14,5 +16,12 @@ if (parsed.kind === "bad") {
   process.exit(1);
 }
 
-console.error(`walk ${parsed.walk.href}: not built yet`);
-process.exit(1);
+try {
+  const result = await walkFocus(parsed.walk);
+  console.log(formatFocusTable(result));
+  process.exit(0);
+} catch (err) {
+  const message = err instanceof Error ? err.message : String(err);
+  console.error(message);
+  process.exit(1);
+}
