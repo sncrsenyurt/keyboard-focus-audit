@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>trap</title>
+<body>
+  <button id="one">One</button>
+  <button id="two">Two</button>
+  <script>
+    const one = document.getElementById("one");
+    const two = document.getElementById("two");
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Tab") return;
+      e.preventDefault();
+      const active = document.activeElement;
+      if (e.shiftKey) {
+        if (active === one) two.focus();
+        else if (active === two) one.focus();
+        else two.focus();
+      } else {
+        if (active === two) one.focus();
+        else if (active === one) two.focus();
+        else one.focus();
+      }
+    });
+  </script>
+</body>
+</html>
