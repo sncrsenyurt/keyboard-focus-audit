@@ -9,6 +9,7 @@ function step(partial: Partial<FocusStep> & Pick<FocusStep, "index" | "tag" | "s
     box: { x: 8, y: 8, width: 40, height: 16 },
     visible: true,
     inViewport: true,
+    domIndex: 0,
     ...partial,
   };
 }

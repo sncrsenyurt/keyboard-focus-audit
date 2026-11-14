@@ -39,6 +39,10 @@ describe("walkFocus", { timeout: 30_000 }, () => {
     expect(ids(result.backward.steps)).toEqual(["#send", "#email", "#home"]);
     expect(result.backward.stopped).toBe("body");
 
+    const forwardDom = result.forward.steps.map((s) => s.domIndex);
+    expect(forwardDom).toEqual([...forwardDom].sort((a, b) => a - b));
+    expect(result.backward.steps.map((s) => s.domIndex)).toEqual([...forwardDom].reverse());
+
     for (const step of [...result.forward.steps, ...result.backward.steps]) {
       expect(step.visible).toBe(true);
       expect(step.inViewport).toBe(true);

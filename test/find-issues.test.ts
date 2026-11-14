@@ -13,6 +13,7 @@ function step(partial: Partial<FocusStep> & Pick<FocusStep, "index" | "selector"
     box: { x: 8, y: 8, width: 40, height: 16 },
     visible: true,
     inViewport: true,
+    domIndex: 0,
     ...partial,
   };
 }
@@ -104,6 +105,71 @@ describe("findIssues", () => {
   });
 });
 
+
+  it("flags a forward tab that moves up or left", () => {
+    const issues = findIssues(
+      walk({
+        stopped: "body",
+        steps: [
+          step({ index: 0, selector: "#first", box: { x: 8, y: 80, width: 60, height: 16 }, domIndex: 5 }),
+          step({ index: 1, selector: "#second", box: { x: 8, y: 40, width: 60, height: 16 }, domIndex: 3 }),
+          step({ index: 2, selector: "#third", box: { x: 8, y: 8, width: 60, height: 16 }, domIndex: 2 }),
+          step({ index: 3, selector: "#fourth", box: { x: 8, y: 120, width: 60, height: 16 }, domIndex: 6 }),
+        ],
+      }),
+    );
+    expect(kinds(issues)).toEqual(["back-jump:forward:1:#second", "back-jump:forward:2:#third"]);
+  });
+
+  it("uses document order when the boxes do not decide", () => {
+    const box = { x: 8, y: 8, width: 40, height: 16 };
+    const issues = findIssues(
+      walk({
+        stopped: "body",
+        steps: [
+          step({ index: 0, selector: "#late", box, domIndex: 8 }),
+          step({ index: 1, selector: "#early", box, domIndex: 3 }),
+        ],
+      }),
+    );
+    expect(kinds(issues)).toEqual(["back-jump:forward:1:#early"]);
+  });
+
+  it("does not flag a back-jump on the backward walk", () => {
+    const issues = findIssues(
+      walk(
+        { stopped: "body", steps: [] },
+        {
+          stopped: "body",
+          steps: [
+            step({ index: 0, selector: "#low", box: { x: 8, y: 80, width: 60, height: 16 }, domIndex: 4 }),
+            step({ index: 1, selector: "#high", box: { x: 8, y: 8, width: 60, height: 16 }, domIndex: 2 }),
+          ],
+        },
+      ),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it("does not also call an offscreen stop a back-jump", () => {
+    const issues = findIssues(
+      walk({
+        stopped: "body",
+        steps: [
+          step({ index: 0, selector: "#visible", box: { x: 8, y: 8, width: 40, height: 16 }, domIndex: 2 }),
+          step({
+            index: 1,
+            selector: "#off",
+            box: { x: -10000, y: 0, width: 40, height: 16 },
+            inViewport: false,
+            domIndex: 3,
+          }),
+        ],
+      }),
+    );
+    expect(kinds(issues)).toEqual(["offscreen:forward:1:#off"]);
+  });
+
 describe("findIssues on fixtures", { timeout: 30_000 }, () => {
   let close: (() => Promise<void>) | undefined;
 
@@ -137,5 +203,14 @@ describe("findIssues on fixtures", { timeout: 30_000 }, () => {
     const url = await open("basic.html");
     const result = await walkFocus({ href: url, maxSteps: 20, viewport });
     expect(findIssues(result)).toEqual([]);
+  });
+
+  it("flags the backwards jumps on the tab-order fixture", async () => {
+    const url = await open("tab-order.html");
+    const result = await walkFocus({ href: url, maxSteps: 20, viewport });
+    expect(kinds(findIssues(result))).toEqual([
+      "back-jump:forward:1:#second",
+      "back-jump:forward:2:#third",
+    ]);
   });
 });

@@ -17,6 +17,7 @@ export type FocusStep = {
   box: Box | null;
   visible: boolean;
   inViewport: boolean;
+  domIndex: number;
 };
 
 export type StopReason = "loop" | "body" | "max-steps";
@@ -109,6 +110,7 @@ async function walkDirection(
       box: captured.box,
       visible: captured.visible,
       inViewport: captured.inViewport,
+      domIndex: captured.domIndex,
     });
   }
 
@@ -308,6 +310,14 @@ function captureFocus(): Captured | null {
     return rect.width > 0 || rect.height > 0;
   }
 
+  function domIndexOf(el: Element): number {
+    const all = document.getElementsByTagName("*");
+    for (let i = 0; i < all.length; i++) {
+      if (all[i] === el) return i;
+    }
+    return -1;
+  }
+
   function isInViewport(el: Element): boolean {
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) return false;
@@ -331,5 +341,6 @@ function captureFocus(): Captured | null {
     box: boxOf(el),
     visible: isVisible(el),
     inViewport: isInViewport(el),
+    domIndex: domIndexOf(el),
   };
 }

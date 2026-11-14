@@ -1,6 +1,6 @@
-import type { DirectionWalk, FocusStep, FocusWalkResult } from "./walk-focus.js";
+import type { Box, DirectionWalk, FocusStep, FocusWalkResult } from "./walk-focus.js";
 
-export type IssueKind = "trap" | "hidden" | "offscreen";
+export type IssueKind = "trap" | "hidden" | "offscreen" | "back-jump";
 
 export type FocusIssue = {
   kind: IssueKind;
@@ -26,11 +26,15 @@ function issuesIn(direction: "forward" | "backward", walk: DirectionWalk): Focus
     });
   }
 
-  for (const step of steps) {
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i]!;
     if (hiddenStop(step)) {
       issues.push({ kind: "hidden", direction, index: step.index, selector: step.selector });
     } else if (!step.inViewport) {
       issues.push({ kind: "offscreen", direction, index: step.index, selector: step.selector });
+    }
+    if (direction === "forward" && i > 0 && jumpsBack(steps[i - 1]!, step)) {
+      issues.push({ kind: "back-jump", direction, index: step.index, selector: step.selector });
     }
   }
 
@@ -49,4 +53,21 @@ function isTrap(walk: DirectionWalk): boolean {
 
 function hiddenStop(step: FocusStep): boolean {
   return !step.visible || step.box === null;
+}
+
+function jumpsBack(from: FocusStep, to: FocusStep): boolean {
+  if (hiddenStop(from) || hiddenStop(to) || !from.inViewport || !to.inViewport) {
+    return false;
+  }
+  if (from.box && to.box) {
+    if (visuallyBefore(to.box, from.box)) return true;
+    if (visuallyBefore(from.box, to.box)) return false;
+  }
+  return to.domIndex < from.domIndex;
+}
+
+function visuallyBefore(a: Box, b: Box): boolean {
+  const overlapY = a.y < b.y + b.height && b.y < a.y + a.height;
+  if (overlapY) return a.x < b.x;
+  return a.y < b.y;
 }
