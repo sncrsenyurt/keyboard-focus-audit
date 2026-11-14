@@ -96,5 +96,31 @@ describe("formatFocusTable", () => {
     expect(text).toContain("forward  1  max-steps");
     expect(text).toContain("backward  0  loop");
     expect(text).toMatch(/div\s+-\s+-\s+div\.item\s+-\s+no\s+no/);
+    expect(text).not.toContain("issues");
+  });
+
+  it("prints a compact issues table after the walks", () => {
+    const result: FocusWalkResult = {
+      href: "http://127.0.0.1/",
+      forward: {
+        stopped: "loop",
+        steps: [
+          step({ index: 0, tag: "button", role: "button", name: "One", selector: "#one" }),
+          step({ index: 1, tag: "button", role: "button", name: "Two", selector: "#two" }),
+        ],
+      },
+      backward: { stopped: "loop", steps: [] },
+    };
+    const text = formatFocusTable(result, [
+      { kind: "trap", direction: "forward", index: 0, selector: "#one" },
+      { kind: "offscreen", direction: "forward", index: 1, selector: "#off" },
+      { kind: "back-jump", direction: "forward", index: 1, selector: "#second" },
+    ]);
+    expect(text).toContain("forward  2  loop");
+    expect(text).toContain("issues  3");
+    expect(text).toMatch(/^kind\s+dir\s+#\s+selector$/m);
+    expect(text).toMatch(/trap\s+forward\s+0\s+#one/);
+    expect(text).toMatch(/offscreen\s+forward\s+1\s+#off/);
+    expect(text).toMatch(/back-jump\s+forward\s+1\s+#second/);
   });
 });

@@ -1,11 +1,31 @@
+import type { FocusIssue } from "./find-issues.js";
 import type { DirectionWalk, FocusStep, FocusWalkResult } from "./walk-focus.js";
 
-export function formatFocusTable(result: FocusWalkResult): string {
-  return [
+export function formatFocusTable(result: FocusWalkResult, issues: FocusIssue[] = []): string {
+  const parts = [
     formatDirection("forward", result.forward),
     "",
     formatDirection("backward", result.backward),
-  ].join("\n");
+  ];
+  if (issues.length) parts.push("", formatIssues(issues));
+  return parts.join("\n");
+}
+
+function formatIssues(issues: FocusIssue[]): string {
+  const header = `issues  ${issues.length}`;
+  const rows = issues.map((issue) => [
+    issue.kind,
+    issue.direction,
+    String(issue.index),
+    issue.selector,
+  ]);
+  const titles = ["kind", "dir", "#", "selector"];
+  const widths = titles.map((title, i) =>
+    Math.max(title.length, ...rows.map((row) => row[i]!.length)),
+  );
+  const line = (cols: string[]) =>
+    cols.map((col, i) => (i === cols.length - 1 ? col : col.padEnd(widths[i]!))).join("  ");
+  return `${header}\n${line(titles)}\n${rows.map(line).join("\n")}`;
 }
 
 function formatDirection(label: string, walk: DirectionWalk): string {
