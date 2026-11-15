@@ -104,6 +104,28 @@ describe("findIssues", () => {
     );
     expect(kinds(issues)).toEqual(["hidden:forward:0:#ghost"]);
   });
+
+  it("flags a stop whose ring check came back empty", () => {
+    const issues = findIssues(
+      walk({
+        stopped: "body",
+        steps: [
+          step({
+            index: 0,
+            selector: "#ringed",
+            indicator: { styleChanges: ["outline"], changedPixels: 80, totalPixels: 600, visible: true },
+          }),
+          step({
+            index: 1,
+            selector: "#bare",
+            box: { x: 8, y: 40, width: 48, height: 16 },
+            indicator: { styleChanges: [], changedPixels: 0, totalPixels: 600, visible: false },
+          }),
+        ],
+      }),
+    );
+    expect(kinds(issues)).toEqual(["no-ring:forward:1:#bare"]);
+  });
 });
 
 
