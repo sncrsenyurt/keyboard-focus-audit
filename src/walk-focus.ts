@@ -1,4 +1,5 @@
 import { chromium, type Page } from "playwright";
+import { checkIndicator, type IndicatorCheck } from "./check-indicator.js";
 import type { Viewport } from "./read-args.js";
 
 export type Box = {
@@ -18,6 +19,7 @@ export type FocusStep = {
   visible: boolean;
   inViewport: boolean;
   domIndex: number;
+  indicator: IndicatorCheck | null;
 };
 
 export type StopReason = "loop" | "body" | "max-steps";
@@ -33,7 +35,7 @@ export type FocusWalkResult = {
   backward: DirectionWalk;
 };
 
-type Captured = Omit<FocusStep, "index"> & { key: number };
+type Captured = Omit<FocusStep, "index" | "indicator"> & { key: number };
 
 const DRAIN_CAP = 1000;
 
@@ -41,15 +43,16 @@ export async function walkFocus(opts: {
   href: string;
   maxSteps: number;
   viewport: Viewport;
+  indicatorCheck?: boolean;
 }): Promise<FocusWalkResult> {
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage({ viewport: opts.viewport });
     await page.goto(opts.href, { waitUntil: "load" });
-    const forward = await startWalk(page, "Tab", opts.maxSteps);
+    const forward = await startWalk(page, "Tab", opts.maxSteps, opts.indicatorCheck ?? true);
 
     await page.goto(opts.href, { waitUntil: "load" });
-    const backward = await startWalk(page, "Shift+Tab", opts.maxSteps);
+    const backward = await startWalk(page, "Shift+Tab", opts.maxSteps, false);
 
     return { href: opts.href, forward, backward };
   } finally {
@@ -61,9 +64,10 @@ async function startWalk(
   page: Page,
   key: "Tab" | "Shift+Tab",
   maxSteps: number,
+  checkRing: boolean,
 ): Promise<DirectionWalk> {
   const drain = await drainToBoundary(page, key);
-  return walkDirection(page, key, maxSteps, drain !== "body");
+  return walkDirection(page, key, maxSteps, checkRing, drain !== "body");
 }
 
 async function drainToBoundary(
@@ -88,6 +92,7 @@ async function walkDirection(
   page: Page,
   key: "Tab" | "Shift+Tab",
   maxSteps: number,
+  checkRing: boolean,
   alreadyOnStep = false,
 ): Promise<DirectionWalk> {
   const steps: FocusStep[] = [];
@@ -101,6 +106,8 @@ async function walkDirection(
     if (!captured) return { steps, stopped: "body" };
     if (firstKey === null) firstKey = captured.key;
     else if (captured.key === firstKey) return { steps, stopped: "loop" };
+    const canSeeRing = checkRing && captured.visible && captured.inViewport && captured.box;
+    const indicator = canSeeRing ? await checkIndicator(page, captured.box!) : null;
     steps.push({
       index: steps.length,
       tag: captured.tag,
@@ -111,6 +118,7 @@ async function walkDirection(
       visible: captured.visible,
       inViewport: captured.inViewport,
       domIndex: captured.domIndex,
+      indicator,
     });
   }
 
