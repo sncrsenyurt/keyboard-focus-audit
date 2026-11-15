@@ -18,6 +18,7 @@ describe("parseArgv", () => {
         maxSteps: 50,
         outDir: "focus-out",
         viewport: { width: 1280, height: 720 },
+        indicatorCheck: true,
       },
     });
   });
@@ -40,6 +41,7 @@ describe("parseArgv", () => {
         maxSteps: 20,
         outDir: "tmp/walk",
         viewport: { width: 390, height: 844 },
+        indicatorCheck: true,
       },
     });
   });
@@ -52,8 +54,14 @@ describe("parseArgv", () => {
         maxSteps: 8,
         outDir: "focus-out",
         viewport: { width: 1280, height: 720 },
+        indicatorCheck: true,
       },
     });
+  });
+
+  it("turns the ring check off", () => {
+    const parsed = parseArgv(["--no-ring-check", "https://example.com"]);
+    expect(parsed.kind === "walk" && parsed.walk.indicatorCheck).toBe(false);
   });
 
   it("rejects an unknown flag", () => {

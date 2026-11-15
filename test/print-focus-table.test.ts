@@ -10,6 +10,7 @@ function step(partial: Partial<FocusStep> & Pick<FocusStep, "index" | "tag" | "s
     visible: true,
     inViewport: true,
     domIndex: 0,
+    indicator: null,
     ...partial,
   };
 }
@@ -21,7 +22,14 @@ describe("formatFocusTable", () => {
       forward: {
         stopped: "body",
         steps: [
-          step({ index: 0, tag: "a", role: "link", name: "Home", selector: "#home" }),
+          step({
+            index: 0,
+            tag: "a",
+            role: "link",
+            name: "Home",
+            selector: "#home",
+            indicator: { styleChanges: ["outline"], changedPixels: 120, totalPixels: 900, visible: true },
+          }),
           step({
             index: 1,
             tag: "input",
@@ -29,6 +37,7 @@ describe("formatFocusTable", () => {
             name: "Email",
             selector: "#email",
             box: { x: 8, y: 32, width: 160, height: 20 },
+            indicator: { styleChanges: [], changedPixels: 0, totalPixels: 2000, visible: false },
           }),
         ],
       },
@@ -51,9 +60,11 @@ describe("formatFocusTable", () => {
     const text = formatFocusTable(result);
     expect(text).toContain("forward  2  body");
     expect(text).toContain("backward  2  body");
-    expect(text).toMatch(/^#\s+tag\s+role\s+name\s+selector\s+box\s+vis\s+view$/m);
+    expect(text).toMatch(/^#\s+tag\s+role\s+name\s+selector\s+box\s+vis\s+view\s+ring$/m);
     expect(text).toContain("#home");
     expect(text).toContain("#email");
+    expect(text).toMatch(/#home\s+8,8 40x16\s+yes\s+yes\s+yes$/m);
+    expect(text).toMatch(/#email\s+8,32 160x20\s+yes\s+yes\s+no$/m);
     expect(text).toContain("8,8 40x16");
     expect(text).toContain("8,32 160x20");
     expect(text).toContain("link");

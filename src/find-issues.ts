@@ -1,6 +1,6 @@
 import type { Box, DirectionWalk, FocusStep, FocusWalkResult } from "./walk-focus.js";
 
-export type IssueKind = "trap" | "hidden" | "offscreen" | "back-jump";
+export type IssueKind = "trap" | "hidden" | "offscreen" | "back-jump" | "no-ring";
 
 export type FocusIssue = {
   kind: IssueKind;
@@ -32,6 +32,9 @@ function issuesIn(direction: "forward" | "backward", walk: DirectionWalk): Focus
       issues.push({ kind: "hidden", direction, index: step.index, selector: step.selector });
     } else if (!step.inViewport) {
       issues.push({ kind: "offscreen", direction, index: step.index, selector: step.selector });
+    }
+    if (step.indicator && !step.indicator.visible) {
+      issues.push({ kind: "no-ring", direction, index: step.index, selector: step.selector });
     }
     if (direction === "forward" && i > 0 && jumpsBack(steps[i - 1]!, step)) {
       issues.push({ kind: "back-jump", direction, index: step.index, selector: step.selector });

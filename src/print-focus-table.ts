@@ -44,8 +44,9 @@ function formatSteps(steps: FocusStep[]): string {
     formatBox(step.box),
     step.visible ? "yes" : "no",
     step.inViewport ? "yes" : "no",
+    formatRing(step.indicator),
   ]);
-  const titles = ["#", "tag", "role", "name", "selector", "box", "vis", "view"];
+  const titles = ["#", "tag", "role", "name", "selector", "box", "vis", "view", "ring"];
   const widths = titles.map((title, i) =>
     Math.max(title.length, ...rows.map((row) => row[i]!.length)),
   );
@@ -57,4 +58,9 @@ function formatSteps(steps: FocusStep[]): string {
 function formatBox(box: FocusStep["box"]): string {
   if (!box) return "-";
   return `${box.x},${box.y} ${box.width}x${box.height}`;
+}
+
+function formatRing(indicator: FocusStep["indicator"]): string {
+  if (!indicator) return "-";
+  return indicator.visible ? "yes" : "no";
 }
