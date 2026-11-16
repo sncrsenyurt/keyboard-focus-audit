@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseArgv } from "../src/read-args.js";
+import { parseArgv, usageText } from "../src/read-args.js";
 
 describe("parseArgv", () => {
   it("treats no args as empty", () => {
@@ -19,6 +19,7 @@ describe("parseArgv", () => {
         outDir: "focus-out",
         viewport: { width: 1280, height: 720 },
         indicatorCheck: true,
+        shots: true,
       },
     });
   });
@@ -42,6 +43,7 @@ describe("parseArgv", () => {
         outDir: "tmp/walk",
         viewport: { width: 390, height: 844 },
         indicatorCheck: true,
+        shots: true,
       },
     });
   });
@@ -55,6 +57,7 @@ describe("parseArgv", () => {
         outDir: "focus-out",
         viewport: { width: 1280, height: 720 },
         indicatorCheck: true,
+        shots: true,
       },
     });
   });
@@ -62,6 +65,15 @@ describe("parseArgv", () => {
   it("turns the ring check off", () => {
     const parsed = parseArgv(["--no-ring-check", "https://example.com"]);
     expect(parsed.kind === "walk" && parsed.walk.indicatorCheck).toBe(false);
+  });
+
+  it("turns the screenshots off", () => {
+    const parsed = parseArgv(["--no-shots", "https://example.com"]);
+    expect(parsed.kind === "walk" && parsed.walk.shots).toBe(false);
+  });
+
+  it("mentions --no-shots in the usage", () => {
+    expect(usageText()).toContain("--no-shots");
   });
 
   it("rejects an unknown flag", () => {

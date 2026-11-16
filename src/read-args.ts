@@ -13,6 +13,7 @@ export type FocusWalk = {
   outDir: string;
   viewport: Viewport;
   indicatorCheck: boolean;
+  shots: boolean;
 };
 
 export type Parsed =
@@ -33,7 +34,8 @@ export function parseArgv(argv: string[]): Parsed {
       pulled.maxSteps !== undefined ||
       pulled.outDir !== undefined ||
       pulled.viewport !== undefined ||
-      pulled.skipRing
+      pulled.skipRing ||
+      pulled.skipShots
     ) {
       return { kind: "bad", reason: "help takes no arguments" };
     }
@@ -56,13 +58,14 @@ export function parseArgv(argv: string[]): Parsed {
       outDir: pulled.outDir ?? DEFAULT_OUT_DIR,
       viewport: pulled.viewport ?? { ...DEFAULT_VIEWPORT },
       indicatorCheck: !pulled.skipRing,
+      shots: !pulled.skipShots,
     },
   };
 }
 
 export function usageText(): string {
   return [
-    "usage: keyboard-focus-audit <url> [--max-steps n] [--out dir] [--viewport WxH] [--no-ring-check]",
+    "usage: keyboard-focus-audit <url> [--max-steps n] [--out dir] [--viewport WxH] [--no-ring-check] [--no-shots]",
     "       keyboard-focus-audit help",
   ].join("\n");
 }
@@ -90,6 +93,7 @@ function pullFlags(argv: string[]):
       outDir: string | undefined;
       viewport: Viewport | undefined;
       skipRing: boolean;
+      skipShots: boolean;
     } {
   const positionals: string[] = [];
   let help = false;
@@ -97,6 +101,7 @@ function pullFlags(argv: string[]):
   let outDir: string | undefined;
   let viewport: Viewport | undefined;
   let skipRing = false;
+  let skipShots = false;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
@@ -110,6 +115,10 @@ function pullFlags(argv: string[]):
     }
     if (arg === "--no-ring-check") {
       skipRing = true;
+      continue;
+    }
+    if (arg === "--no-shots") {
+      skipShots = true;
       continue;
     }
 
@@ -145,7 +154,7 @@ function pullFlags(argv: string[]):
     positionals.push(arg);
   }
 
-  return { kind: "ok", help, positionals, maxSteps, outDir, viewport, skipRing };
+  return { kind: "ok", help, positionals, maxSteps, outDir, viewport, skipRing, skipShots };
 }
 
 function readFlag(
