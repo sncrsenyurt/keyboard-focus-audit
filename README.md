@@ -6,7 +6,9 @@ I want one command that opens a url, walks it with Tab and Shift+Tab, and writes
 keyboard-focus-audit https://example.com
 ```
 
-`--max-steps` caps how far the walk goes. `--out` is the folder for the report. `--viewport` is the width and height, written as `1280x720`. `--no-ring-check` skips the focus ring check, which is the slow part. The command prints a compact table of the forward and backward focus order. It also flags focus traps, hidden or offscreen stops, tab moves that jump backwards in the page, and stops with no visible focus ring, and exits 2 when it finds any of those. For the ring check I blur each forward stop, compare its outline, shadow, border and colors, and diff a small screenshot around it with and without focus. A style change that leaves the pixels alone does not count. The html report with a screenshot of each step is also still ahead.
+`--max-steps` caps how far the walk goes. `--out` is the folder I write to, `focus-out` by default. `--viewport` is the width and height, written as `1280x720`. `--no-ring-check` skips the focus ring check, which is the slow part. `--no-shots` skips the screenshots. The command prints a compact table of the forward and backward focus order, then a one-line count of each problem and the path of the record. It flags focus traps, hidden or offscreen stops, tab moves that jump backwards in the page, and stops with no visible focus ring. I exit 0 when nothing is wrong, 2 when any of those turn up, and 1 on a bad invocation or a runtime failure.
+
+For every step I save a screenshot under `steps/`, `forward-001.png` and so on, with a bright box around the focused element. The box comes off before the next tab so it does not change focus or the ring check. `focus-record.json` has the tool version, the url, the viewport, the time, both walks, the issues, and the counts. For the ring check I blur each forward stop, compare its outline, shadow, border and colors, and diff a small screenshot around it with and without focus. A style change that leaves the pixels alone does not count. The html report is still ahead.
 
 ```
 npm install

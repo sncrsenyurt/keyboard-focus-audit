@@ -1,29 +1,61 @@
 #!/usr/bin/env node
+import { realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { parseArgv, usageText } from "./read-args.js";
 import { findIssues } from "./find-issues.js";
 import { formatFocusTable } from "./print-focus-table.js";
 import { walkFocus } from "./walk-focus.js";
+import { countIssues, formatSummary, writeFocusRecord } from "./write-record.js";
 
-const parsed = parseArgv(process.argv.slice(2));
+export async function run(argv: string[]): Promise<number> {
+  const parsed = parseArgv(argv);
 
-if (parsed.kind === "help" || parsed.kind === "empty") {
-  console.log(usageText());
-  process.exit(parsed.kind === "help" ? 0 : 1);
+  if (parsed.kind === "help" || parsed.kind === "empty") {
+    console.log(usageText());
+    return parsed.kind === "help" ? 0 : 1;
+  }
+
+  if (parsed.kind === "bad") {
+    console.error(parsed.reason);
+    console.error(usageText());
+    return 1;
+  }
+
+  try {
+    const result = await walkFocus({
+      href: parsed.walk.href,
+      maxSteps: parsed.walk.maxSteps,
+      viewport: parsed.walk.viewport,
+      indicatorCheck: parsed.walk.indicatorCheck,
+      shots: parsed.walk.shots,
+      outDir: parsed.walk.outDir,
+    });
+    const issues = findIssues(result);
+    const recordPath = await writeFocusRecord({
+      outDir: parsed.walk.outDir,
+      viewport: parsed.walk.viewport,
+      result,
+      issues,
+    });
+    console.log(`${formatFocusTable(result, issues)}\n\n${formatSummary(countIssues(issues), recordPath)}`);
+    return issues.length ? 2 : 0;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(message);
+    return 1;
+  }
 }
 
-if (parsed.kind === "bad") {
-  console.error(parsed.reason);
-  console.error(usageText());
-  process.exit(1);
+function ranAsCli(): boolean {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(entry)).href;
+  } catch {
+    return false;
+  }
 }
 
-try {
-  const result = await walkFocus(parsed.walk);
-  const issues = findIssues(result);
-  console.log(formatFocusTable(result, issues));
-  process.exit(issues.length ? 2 : 0);
-} catch (err) {
-  const message = err instanceof Error ? err.message : String(err);
-  console.error(message);
-  process.exit(1);
+if (ranAsCli()) {
+  process.exit(await run(process.argv.slice(2)));
 }
