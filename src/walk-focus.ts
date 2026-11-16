@@ -1,6 +1,8 @@
+import path from "node:path";
 import { chromium, type Page } from "playwright";
 import { checkIndicator, type IndicatorCheck } from "./check-indicator.js";
 import type { Viewport } from "./read-args.js";
+import { saveStepShot } from "./shot-step.js";
 
 export type Box = {
   width: number;
@@ -20,6 +22,7 @@ export type FocusStep = {
   inViewport: boolean;
   domIndex: number;
   indicator: IndicatorCheck | null;
+  shot: string | null;
 };
 
 export type StopReason = "loop" | "body" | "max-steps";
@@ -35,24 +38,32 @@ export type FocusWalkResult = {
   backward: DirectionWalk;
 };
 
-type Captured = Omit<FocusStep, "index" | "indicator"> & { key: number };
+type Captured = Omit<FocusStep, "index" | "indicator" | "shot"> & { key: number };
 
 const DRAIN_CAP = 1000;
+
+type ShotPlan = {
+  outDir: string;
+  direction: "forward" | "backward";
+};
 
 export async function walkFocus(opts: {
   href: string;
   maxSteps: number;
   viewport: Viewport;
   indicatorCheck?: boolean;
+  shots?: boolean;
+  outDir?: string;
 }): Promise<FocusWalkResult> {
+  if (opts.shots && !opts.outDir) throw new Error("need an output directory for the shots");
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage({ viewport: opts.viewport });
     await page.goto(opts.href, { waitUntil: "load" });
-    const forward = await startWalk(page, "Tab", opts.maxSteps, opts.indicatorCheck ?? true);
+    const forward = await startWalk(page, "Tab", opts, "forward");
 
     await page.goto(opts.href, { waitUntil: "load" });
-    const backward = await startWalk(page, "Shift+Tab", opts.maxSteps, false);
+    const backward = await startWalk(page, "Shift+Tab", opts, "backward");
 
     return { href: opts.href, forward, backward };
   } finally {
@@ -63,11 +74,13 @@ export async function walkFocus(opts: {
 async function startWalk(
   page: Page,
   key: "Tab" | "Shift+Tab",
-  maxSteps: number,
-  checkRing: boolean,
+  opts: { maxSteps: number; indicatorCheck?: boolean; shots?: boolean; outDir?: string },
+  direction: "forward" | "backward",
 ): Promise<DirectionWalk> {
   const drain = await drainToBoundary(page, key);
-  return walkDirection(page, key, maxSteps, checkRing, drain !== "body");
+  const shots = opts.shots && opts.outDir ? { outDir: opts.outDir, direction } : null;
+  const checkRing = direction === "forward" && (opts.indicatorCheck ?? true);
+  return walkDirection(page, key, opts.maxSteps, checkRing, drain !== "body", shots);
 }
 
 async function drainToBoundary(
@@ -94,6 +107,7 @@ async function walkDirection(
   maxSteps: number,
   checkRing: boolean,
   alreadyOnStep = false,
+  shots: ShotPlan | null = null,
 ): Promise<DirectionWalk> {
   const steps: FocusStep[] = [];
   let firstKey: number | null = null;
@@ -108,6 +122,7 @@ async function walkDirection(
     else if (captured.key === firstKey) return { steps, stopped: "loop" };
     const canSeeRing = checkRing && captured.visible && captured.inViewport && captured.box;
     const indicator = canSeeRing ? await checkIndicator(page, captured.box!) : null;
+    const shot = shots ? await takeShot(page, captured.box, shots, steps.length) : null;
     steps.push({
       index: steps.length,
       tag: captured.tag,
@@ -119,10 +134,22 @@ async function walkDirection(
       inViewport: captured.inViewport,
       domIndex: captured.domIndex,
       indicator,
+      shot,
     });
   }
 
   return { steps, stopped: "max-steps" };
+}
+
+async function takeShot(
+  page: Page,
+  box: Box | null,
+  shots: ShotPlan,
+  index: number,
+): Promise<string> {
+  const rel = `steps/${shots.direction}-${String(index + 1).padStart(3, "0")}.png`;
+  await saveStepShot(page, box, path.join(shots.outDir, rel));
+  return rel;
 }
 
 function captureFocus(): Captured | null {

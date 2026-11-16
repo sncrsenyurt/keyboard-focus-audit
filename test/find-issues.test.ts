@@ -15,6 +15,7 @@ function step(partial: Partial<FocusStep> & Pick<FocusStep, "index" | "selector"
     inViewport: true,
     domIndex: 0,
     indicator: null,
+    shot: null,
     ...partial,
   };
 }
