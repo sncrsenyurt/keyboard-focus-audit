@@ -2,9 +2,11 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { PNG } from "pngjs";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { run } from "../src/keyboard-focus-audit.js";
 import type { FocusRecord } from "../src/write-record.js";
 import { renderFocusReport, writeFocusReport } from "../src/write-report.js";
+import { serveFixture } from "./serve-fixture.js";
 
 const viewport = { width: 800, height: 600 };
 
@@ -181,5 +183,92 @@ describe("writeFocusReport", () => {
     const html = await readFile(file, "utf8");
     expect(html).toContain(`data:image/png;base64,${png.toString("base64")}`);
     expect(assetHrefs(html)).toEqual([]);
+  });
+});
+
+describe("report from a page", { timeout: 30_000 }, () => {
+  let close: (() => Promise<void>) | undefined;
+  const dirs: string[] = [];
+
+  afterEach(async () => {
+    if (close) await close();
+    close = undefined;
+    await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+  });
+
+  async function open(file: string): Promise<string> {
+    const served = await serveFixture(file);
+    close = served.close;
+    return served.url;
+  }
+
+  async function scratch(): Promise<string> {
+    const dir = await mkdtemp(path.join(tmpdir(), "kfa-"));
+    dirs.push(dir);
+    return dir;
+  }
+
+  it("writes the report for a trap, shots included", async () => {
+    const url = await open("trap.html");
+    const dir = await scratch();
+    const report = path.join(dir, "page.html");
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const code = await run([
+        url,
+        "--out",
+        dir,
+        "--report",
+        report,
+        "--viewport",
+        "800x600",
+        "--no-ring-check",
+      ]);
+      expect(code).toBe(2);
+      const text = log.mock.calls.map((args) => args.join(" ")).join("\n");
+      expect(text).toContain(`report  ${report}`);
+      const html = await readFile(report, "utf8");
+      expect(html).toContain(url);
+      expect(html).toContain("#one");
+      expect(html).toContain("#two");
+      expect(html).toContain("trap");
+      expect(html).toContain("data:image/png;base64,");
+      expect(html).not.toMatch(/<script\b/i);
+      expect(html).not.toMatch(/<link\b/i);
+      expect(assetHrefs(html)).toEqual([]);
+      const encoded = html.match(/data:image\/png;base64,([A-Za-z0-9+/=]+)/);
+      expect(encoded).toBeTruthy();
+      const buf = Buffer.from(encoded![1]!, "base64");
+      expect(buf.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("writes a full listing without pictures when shots are off", async () => {
+    const url = await open("basic.html");
+    const dir = await scratch();
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const code = await run([
+        url,
+        "--out",
+        dir,
+        "--viewport",
+        "800x600",
+        "--no-ring-check",
+        "--no-shots",
+      ]);
+      expect(code).toBe(0);
+      const html = await readFile(path.join(dir, "focus-report.html"), "utf8");
+      expect(html).toContain("Home");
+      expect(html).toContain("Email");
+      expect(html).toContain("Send");
+      expect(html).toContain("#home");
+      expect(html).not.toContain("<img");
+      expect(assetHrefs(html)).toEqual([]);
+    } finally {
+      log.mockRestore();
+    }
   });
 });

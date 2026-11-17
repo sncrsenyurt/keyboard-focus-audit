@@ -39,6 +39,18 @@ describe("formatSummary", () => {
       "summary  trap 2  hidden 0  offscreen 1  back-jump 0  no-ring 3\nrecord  focus-out/focus-record.json",
     );
   });
+
+  it("adds the report path when there is one", () => {
+    expect(
+      formatSummary(
+        { trap: 0, hidden: 0, offscreen: 0, "back-jump": 0, "no-ring": 0 },
+        "focus-out/focus-record.json",
+        "focus-out/focus-report.html",
+      ),
+    ).toBe(
+      "summary  trap 0  hidden 0  offscreen 0  back-jump 0  no-ring 0\nrecord  focus-out/focus-record.json\nreport  focus-out/focus-report.html",
+    );
+  });
 });
 
 describe("writeFocusRecord", () => {

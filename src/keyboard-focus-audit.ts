@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 import { realpathSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { parseArgv, usageText } from "./read-args.js";
 import { findIssues } from "./find-issues.js";
 import { formatFocusTable } from "./print-focus-table.js";
 import { walkFocus } from "./walk-focus.js";
-import { countIssues, formatSummary, writeFocusRecord } from "./write-record.js";
+import { writeFocusReport } from "./write-report.js";
+import { countIssues, formatSummary, writeFocusRecord, type FocusRecord } from "./write-record.js";
 
 export async function run(argv: string[]): Promise<number> {
   const parsed = parseArgv(argv);
@@ -37,7 +39,18 @@ export async function run(argv: string[]): Promise<number> {
       result,
       issues,
     });
-    console.log(`${formatFocusTable(result, issues)}\n\n${formatSummary(countIssues(issues), recordPath)}`);
+    let reportPath: string | null = null;
+    if (parsed.walk.report) {
+      const record = JSON.parse(await readFile(recordPath, "utf8")) as FocusRecord;
+      reportPath = await writeFocusReport({
+        file: parsed.walk.report,
+        outDir: parsed.walk.outDir,
+        record,
+      });
+    }
+    console.log(
+      `${formatFocusTable(result, issues)}\n\n${formatSummary(countIssues(issues), recordPath, reportPath)}`,
+    );
     return issues.length ? 2 : 0;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

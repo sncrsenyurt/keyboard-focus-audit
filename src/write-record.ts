@@ -52,9 +52,15 @@ export function countIssues(issues: FocusIssue[]): IssueCounts {
   return counts;
 }
 
-export function formatSummary(counts: IssueCounts, recordPath: string): string {
+export function formatSummary(
+  counts: IssueCounts,
+  recordPath: string,
+  reportPath?: string | null,
+): string {
   const bits = KINDS.map((kind) => `${kind} ${counts[kind]}`).join("  ");
-  return `summary  ${bits}\nrecord  ${recordPath}`;
+  const lines = [`summary  ${bits}`, `record  ${recordPath}`];
+  if (reportPath) lines.push(`report  ${reportPath}`);
+  return lines.join("\n");
 }
 
 export async function writeFocusRecord(opts: {
