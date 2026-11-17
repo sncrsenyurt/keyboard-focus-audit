@@ -1,3 +1,4 @@
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseArgv, usageText } from "../src/read-args.js";
 
@@ -20,6 +21,7 @@ describe("parseArgv", () => {
         viewport: { width: 1280, height: 720 },
         indicatorCheck: true,
         shots: true,
+        report: path.join("focus-out", "focus-report.html"),
       },
     });
   });
@@ -44,6 +46,7 @@ describe("parseArgv", () => {
         viewport: { width: 390, height: 844 },
         indicatorCheck: true,
         shots: true,
+        report: path.join("tmp/walk", "focus-report.html"),
       },
     });
   });
@@ -58,6 +61,7 @@ describe("parseArgv", () => {
         viewport: { width: 1280, height: 720 },
         indicatorCheck: true,
         shots: true,
+        report: path.join("focus-out", "focus-report.html"),
       },
     });
   });
@@ -74,6 +78,28 @@ describe("parseArgv", () => {
 
   it("mentions --no-shots in the usage", () => {
     expect(usageText()).toContain("--no-shots");
+  });
+
+  it("puts the report next to the record unless told otherwise", () => {
+    const custom = parseArgv(["https://example.com", "--report=tmp/page.html"]);
+    expect(custom.kind === "walk" && custom.walk.report).toBe("tmp/page.html");
+
+    const skipped = parseArgv(["--no-report", "https://example.com"]);
+    expect(skipped.kind === "walk" && skipped.walk.report).toBeNull();
+  });
+
+  it("rejects a report path and --no-report together", () => {
+    expect(parseArgv(["https://example.com", "--report", "a.html", "--no-report"]).kind).toBe("bad");
+  });
+
+  it("rejects a missing report path", () => {
+    expect(parseArgv(["https://example.com", "--report"]).kind).toBe("bad");
+  });
+
+  it("mentions the report flags in the usage", () => {
+    const usage = usageText();
+    expect(usage).toContain("--report");
+    expect(usage).toContain("--no-report");
   });
 
   it("rejects an unknown flag", () => {

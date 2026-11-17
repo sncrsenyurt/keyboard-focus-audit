@@ -1,5 +1,8 @@
+import path from "node:path";
+
 const DEFAULT_MAX_STEPS = 50;
 const DEFAULT_OUT_DIR = "focus-out";
+const DEFAULT_REPORT = "focus-report.html";
 const DEFAULT_VIEWPORT = { width: 1280, height: 720 };
 
 export type Viewport = {
@@ -14,6 +17,7 @@ export type FocusWalk = {
   viewport: Viewport;
   indicatorCheck: boolean;
   shots: boolean;
+  report: string | null;
 };
 
 export type Parsed =
@@ -35,7 +39,9 @@ export function parseArgv(argv: string[]): Parsed {
       pulled.outDir !== undefined ||
       pulled.viewport !== undefined ||
       pulled.skipRing ||
-      pulled.skipShots
+      pulled.skipShots ||
+      pulled.skipReport ||
+      pulled.report !== undefined
     ) {
       return { kind: "bad", reason: "help takes no arguments" };
     }
@@ -59,13 +65,16 @@ export function parseArgv(argv: string[]): Parsed {
       viewport: pulled.viewport ?? { ...DEFAULT_VIEWPORT },
       indicatorCheck: !pulled.skipRing,
       shots: !pulled.skipShots,
+      report: pulled.skipReport
+        ? null
+        : (pulled.report ?? path.join(pulled.outDir ?? DEFAULT_OUT_DIR, DEFAULT_REPORT)),
     },
   };
 }
 
 export function usageText(): string {
   return [
-    "usage: keyboard-focus-audit <url> [--max-steps n] [--out dir] [--viewport WxH] [--no-ring-check] [--no-shots]",
+    "usage: keyboard-focus-audit <url> [--max-steps n] [--out dir] [--viewport WxH] [--no-ring-check] [--no-shots] [--report file] [--no-report]",
     "       keyboard-focus-audit help",
   ].join("\n");
 }
@@ -94,6 +103,8 @@ function pullFlags(argv: string[]):
       viewport: Viewport | undefined;
       skipRing: boolean;
       skipShots: boolean;
+      skipReport: boolean;
+      report: string | undefined;
     } {
   const positionals: string[] = [];
   let help = false;
@@ -102,6 +113,8 @@ function pullFlags(argv: string[]):
   let viewport: Viewport | undefined;
   let skipRing = false;
   let skipShots = false;
+  let skipReport = false;
+  let report: string | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
@@ -119,6 +132,10 @@ function pullFlags(argv: string[]):
     }
     if (arg === "--no-shots") {
       skipShots = true;
+      continue;
+    }
+    if (arg === "--no-report") {
+      skipReport = true;
       continue;
     }
 
@@ -139,6 +156,14 @@ function pullFlags(argv: string[]):
       continue;
     }
 
+    const reportFlag = readFlag(arg, "--report", argv, i);
+    if (reportFlag) {
+      if (!reportFlag.value) return { kind: "bad", reason: "--report needs a path" };
+      report = reportFlag.value;
+      i += reportFlag.skip;
+      continue;
+    }
+
     const view = readFlag(arg, "--viewport", argv, i);
     if (view) {
       const parsed = parseViewport(view.value);
@@ -154,7 +179,22 @@ function pullFlags(argv: string[]):
     positionals.push(arg);
   }
 
-  return { kind: "ok", help, positionals, maxSteps, outDir, viewport, skipRing, skipShots };
+  if (skipReport && report !== undefined) {
+    return { kind: "bad", reason: "use --report or --no-report" };
+  }
+
+  return {
+    kind: "ok",
+    help,
+    positionals,
+    maxSteps,
+    outDir,
+    viewport,
+    skipRing,
+    skipShots,
+    skipReport,
+    report,
+  };
 }
 
 function readFlag(
