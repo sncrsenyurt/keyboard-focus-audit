@@ -1,0 +1,104 @@
+body {
+  margin: 0;
+  color: #241f1a;
+  background: #f6f3ee;
+  font: 17px/1.45 Georgia, serif;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 22px 40px;
+  border-bottom: 1px solid #d9d2c5;
+}
+
+.shop {
+  margin: 0;
+  font-size: 20px;
+}
+
+header a {
+  color: #241f1a;
+}
+
+main {
+  max-width: 420px;
+  padding: 36px 40px 120px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: normal;
+}
+
+label {
+  display: block;
+  margin: 18px 0 6px;
+  font: 14px/1.3 system-ui, sans-serif;
+}
+
+input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #b7ad9e;
+  background: #fff;
+  font: 16px/1.3 system-ui, sans-serif;
+}
+
+#reserve {
+  margin-top: 18px;
+  padding: 8px 16px;
+  border: 0;
+  background: #2c3a32;
+  color: #f6f3ee;
+  font: 15px/1.2 system-ui, sans-serif;
+}
+
+#reserve:focus,
+#reserve:focus-visible {
+  outline: none;
+}
+
+.note {
+  margin-top: 22px;
+  color: #5c564c;
+  font: 14px/1.4 system-ui, sans-serif;
+}
+
+#staff {
+  position: absolute;
+  left: 40px;
+  top: 560px;
+  opacity: 0;
+}
+
+#pickup {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  width: 280px;
+  padding: 16px 18px 18px;
+  border: 1px solid #d9d2c5;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(36, 31, 26, 0.12);
+}
+
+#pickup h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: normal;
+}
+
+#pickup p {
+  margin: 0 0 14px;
+  font: 14px/1.4 system-ui, sans-serif;
+}
+
+#pickup button {
+  margin-right: 8px;
+  padding: 6px 10px;
+  font: 14px/1.2 system-ui, sans-serif;
+}
