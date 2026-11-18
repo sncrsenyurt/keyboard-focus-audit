@@ -1,0 +1,56 @@
+name: audit
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm test
+      - name: audit the demo
+        run: |
+          node demo/serve.mjs &
+          pid=$!
+          trap 'kill $pid' EXIT
+          for _ in 1 2 3 4 5 6 7 8 9 10; do
+            curl -sf http://127.0.0.1:4173/ >/dev/null && break
+            sleep 0.3
+          done
+          set +e
+          node dist/keyboard-focus-audit.js http://127.0.0.1:4173/ --out demo-out --max-steps 8 --viewport 1280x720
+          code=$?
+          set -e
+          if [ "$code" -ne 2 ]; then
+            echo "expected exit 2, got $code"
+            exit 1
+          fi
+          test -s demo-out/focus-record.json
+          test -s demo-out/focus-report.html
+          test -n "$(ls demo-out/steps/*.png)"
+          node --input-type=module <<'EOF'
+          import fs from "node:fs";
+          const record = JSON.parse(fs.readFileSync("demo-out/focus-record.json", "utf8"));
+          const kinds = new Set(record.issues.map((issue) => issue.kind));
+          const missing = ["trap", "hidden", "back-jump", "no-ring"].filter((kind) => !kinds.has(kind));
+          if (missing.length) {
+            console.error("missing " + missing.join(", "));
+            process.exit(1);
+          }
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: demo-focus-audit
+          path: demo-out/
+          if-no-files-found: warn
